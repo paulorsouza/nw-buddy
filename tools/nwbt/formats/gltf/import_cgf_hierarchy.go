@@ -36,7 +36,10 @@ func (doc *Document) ImportCgfHierarchy(cgfile *cgf.File, handleObject HandleObj
 		}
 
 		if isLod {
-			lod, _ = strconv.Atoi(lodRegex.FindStringSubmatch(chunk.Name)[1])
+			// alguns nomes trazem "$lod" sem número
+			if m := lodRegex.FindStringSubmatch(chunk.Name); len(m) > 1 {
+				lod, _ = strconv.Atoi(m[1])
+			}
 		}
 
 		node, nodeIndex := nodeMap.lookup(chunk.ChunkHeader.Id)

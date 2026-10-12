@@ -69,6 +69,7 @@ func (c *Collector) CollectCdf(cdf *cdf.Document, material string, targetFile st
 			})
 		}
 	}
+	group.Animations = append(group.Animations, flgExtraAnims...)
 	if len(group.Geometries) > 0 {
 		group.TargetFile = targetFile
 		c.models.Store(group.TargetFile, group)

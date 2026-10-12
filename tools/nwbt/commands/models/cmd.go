@@ -89,6 +89,7 @@ func init() {
 	Cmd.Flags().StringVar(&flg.CrcFile, "crc-file", "nwt-crc.json", "file with crc hashes. Only used for object-stream conversion")
 	Cmd.Flags().StringVar(&flg.UuidFile, "uuid-file", "nwt-types.json", "file with uuid hashes. Only used for object-stream conversion")
 	Cmd.AddCommand(
+		cmdCollectSlices,
 		cmdCollectAppearances,
 		cmdCollectCapitals,
 		cmdCollectCostumes,

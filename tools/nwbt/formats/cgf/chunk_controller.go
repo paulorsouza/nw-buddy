@@ -201,12 +201,13 @@ func smallTree64BitQuat(data [2]uint32) (comp [4]float32, err error) {
 	var shift uint
 	var sqrsumm float32
 
+	// 21 + 21 + 20 bits para os três componentes guardados, 2 bits do índice omitido.
 	for i, targetComponentIndex := 0, 0; i < 4; i++ {
 		if uint32(i) == index {
 			continue
 		}
 		if targetComponentIndex < 2 {
-			packed := uint32(value>>shift) & 0xfffff
+			packed := uint32(value>>shift) & 0x1fffff
 			comp[i] = float32(packed)/MAX_21BITf - RANGE_21BIT
 			sqrsumm += comp[i] * comp[i]
 			shift += 21
@@ -216,6 +217,7 @@ func smallTree64BitQuat(data [2]uint32) (comp [4]float32, err error) {
 			sqrsumm += comp[i] * comp[i]
 			shift += 20
 		}
+		targetComponentIndex++
 	}
 
 	comp[index] = float32(math.Sqrt(1.0 - float64(sqrsumm)))

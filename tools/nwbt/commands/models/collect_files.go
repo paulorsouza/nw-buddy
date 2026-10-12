@@ -12,6 +12,7 @@ import (
 )
 
 var flgMaterial string
+var flgExtraAnims []importer.AnimationAsset
 var cmdCollectFiles = &cobra.Command{
 	Use:   "files",
 	Short: "converts a specific file with an optional material override",
@@ -50,8 +51,20 @@ func (c *Collector) CollectFiles(patterns []string, mtl string) {
 		return
 	}
 
+	// .caf passados junto com um .cdf entram como animações do mesmo glb.
+	flgExtraAnims = nil
+	for _, file := range files {
+		if path.Ext(file.Path()) == ".caf" {
+			name := strings.TrimSuffix(path.Base(file.Path()), ".caf")
+			flgExtraAnims = append(flgExtraAnims, importer.AnimationAsset{File: file.Path(), Name: name})
+		}
+	}
+
 	for _, file := range files {
 		model := file.Path()
+		if path.Ext(model) == ".caf" {
+			continue
+		}
 		material := mtl
 		targetFile := c.outputPath(model)
 		if !c.shouldProcess(targetFile) {
