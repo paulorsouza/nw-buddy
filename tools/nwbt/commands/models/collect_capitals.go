@@ -104,46 +104,8 @@ func (c *Collector) collectSliceInto(group *importer.AssetGroup, file nwfs.File,
 		for _, component := range node.Components {
 			switch v := component.(type) {
 			case nwt.LightComponent:
-				config := v.LightConfiguration
-				if !config.Visible {
-					break
-				}
-				switch config.LightType {
-				case 0:
-					group.Lights = append(group.Lights, importer.LightAsset{
-						Type:      0,
-						Color:     [3]float32{float32(config.Color[0]), float32(config.Color[1]), float32(config.Color[2])},
-						Intensity: float32(config.DiffuseMultiplier),
-						Range:     float32(config.PointMaxDistance),
-						Entity: importer.Entity{
-							Name:      string(node.Entity.Name),
-							Transform: math.CryToGltfMat4(mat4.Multiply(rootTransform, node.Transform)),
-						},
-					})
-				case 1: // area
-					group.Lights = append(group.Lights, importer.LightAsset{
-						Type:      0,
-						Color:     [3]float32{float32(config.Color[0]), float32(config.Color[1]), float32(config.Color[2])},
-						Intensity: float32(config.DiffuseMultiplier),
-						Range:     float32(config.PointMaxDistance),
-						Entity: importer.Entity{
-							Name:      string(node.Entity.Name),
-							Transform: math.CryToGltfMat4(mat4.Multiply(rootTransform, node.Transform)),
-						},
-					})
-				case 2: // projector
-					group.Lights = append(group.Lights, importer.LightAsset{
-						Type:           0,
-						Color:          [3]float32{float32(config.Color[0]), float32(config.Color[1]), float32(config.Color[2])},
-						Intensity:      float32(config.DiffuseMultiplier),
-						Range:          float32(config.PointMaxDistance),
-						OuterConeAngle: float32(config.ProjectorFOV/2.0) * DEG_TO_RAD,
-						Entity: importer.Entity{
-							Name:      string(node.Entity.Name),
-							Transform: math.CryToGltfMat4(mat4.Multiply(rootTransform, node.Transform)),
-						},
-					})
-				case 3: // probe
+				if light, ok := sliceLight(v.LightConfiguration, string(node.Entity.Name), math.CryToGltfMat4(mat4.Multiply(rootTransform, node.Transform))); ok {
+					group.Lights = append(group.Lights, light)
 				}
 			case nwt.InstancedMeshComponent:
 				meshNode := v.Instanced_Mesh_Render_Node.BaseClass1
@@ -321,4 +283,53 @@ func (c *Collector) collectSliceInto(group *importer.AssetGroup, file nwfs.File,
 		}
 
 	})
+}
+// sliceLight converte a luz do jogo para o glTF (KHR_lights_punctual) sem perder o tipo: pontual vira "point" com o
+// alcance do jogo; área e projetor viram "spot" (área: abertura AreaFOV e alcance AreaMaxDistance; projetor: ProjectorFOV
+// e ProjectorDistance), para o importador orientar o ator. Os parâmetros do jogo vão nos extras do nó (nw-port:
+// tools/ue/city_lights.py troca a área por luz retangular, aplica sombra, distância de desenho e intensidade).
+func sliceLight(config nwt.LightConfiguration, name string, transform mat4.Data) (importer.LightAsset, bool) {
+	if !config.Visible || config.VolumetricFogOnly || config.LightType > 2 {
+		return importer.LightAsset{}, false
+	}
+	light := importer.LightAsset{
+		Type:      0,
+		Color:     [3]float32{float32(config.Color[0]), float32(config.Color[1]), float32(config.Color[2])},
+		Intensity: float32(config.DiffuseMultiplier),
+		Range:     float32(config.PointMaxDistance),
+		Entity:    importer.Entity{Name: name, Transform: transform},
+	}
+	bulb := float32(config.PointAttenuationBulbSize)
+	switch config.LightType {
+	case 1: // área
+		light.Type = 2
+		light.Range = float32(config.AreaMaxDistance)
+		light.OuterConeAngle = float32(config.AreaFOV/2.0) * DEG_TO_RAD
+	case 2: // projetor
+		light.Type = 2
+		light.Range = float32(config.ProjectorDistance)
+		light.OuterConeAngle = float32(config.ProjectorFOV/2.0) * DEG_TO_RAD
+		bulb = float32(config.ProjectorAttenuationBulbSize)
+	}
+	light.Extras = map[string]any{
+		"entity":            name,
+		"type":              int(config.LightType),
+		"diffuse":           float32(config.DiffuseMultiplier),
+		"specular":          float32(config.SpecMultiplier),
+		"bulb":              bulb,
+		"area_width":        float32(config.AreaWidth),
+		"area_height":       float32(config.AreaHeight),
+		"cast_shadows_spec": uint32(config.CastShadowsSpec),
+		"view_dist_mult":    float32(config.ViewDistanceMultiplier),
+		"view_dist_cap":     float32(config.ViewDistanceCap),
+		"view_dist_capped":  bool(config.ViewDistanceCapEnabled),
+		"anim_index":        uint32(config.AnimIndex),
+		"anim_speed":        float32(config.AnimSpeed),
+		"anim_phase":        float32(config.AnimPhase),
+		"ambient":           bool(config.Ambient),
+		"on":                bool(config.OnInitially),
+		"tod_influence":     float32(config.TodInfluence),
+		"indoor_only":       bool(config.IndoorOnly),
+	}
+	return light, true
 }

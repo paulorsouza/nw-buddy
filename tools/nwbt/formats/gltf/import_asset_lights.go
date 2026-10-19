@@ -1,6 +1,7 @@
 package gltf
 
 import (
+	"fmt"
 	"nw-buddy/tools/formats/gltf/importer"
 	"nw-buddy/tools/utils/math/mat4"
 )
@@ -28,6 +29,11 @@ func (doc *Document) ImportAssetLights(lights []importer.LightAsset, intensitySc
 
 		node, _ := doc.NewNode()
 		node.Name = light.Entity.Name
+		if light.Extras != nil {
+			// Nome único para o importador achar os parâmetros do jogo (extras) pelo ator.
+			node.Name = fmt.Sprintf("nwlight_%d", i)
+			node.Extras = light.Extras
+		}
 		node.Extensions = map[string]any{
 			"KHR_lights_punctual": map[string]any{
 				"light": i,

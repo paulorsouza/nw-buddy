@@ -39,6 +39,8 @@ type LightAsset struct {
 	InnerConeAngle float32
 	OuterConeAngle float32
 	Range          float32
+	// Parâmetros do jogo (LightConfiguration) gravados nos extras do nó, para o importador do nw-port.
+	Extras map[string]any
 }
 
 type CameraAsset struct {
